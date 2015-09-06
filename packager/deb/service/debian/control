@@ -1,0 +1,15 @@
+Source: %%name%%
+Maintainer: %%author.name%% <%%author.email%%>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.5
+Build-Depends: debhelper (>= 9)
+
+Package: %%name%%
+Architecture: %%arch%%
+Pre-Depends: bash (>= 4.2), debconf
+Depends: ${misc:Depends}, nodejs, daemontools-run, adduser%%requiredDbs%%%%requiredNet%%
+Description: %%description%%
+ Package built automatically with 'deployerjs'. See
+ %%homepage%%
+ or `man %%name%%` for details.

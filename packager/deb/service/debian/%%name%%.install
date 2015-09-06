@@ -1,0 +1,6 @@
+etc/* /etc/%%name%%/
+examples /usr/share/doc/%%name%%/
+app/* /usr/lib/%%name%%/
+debian/run /var/lib/%%name%%/%%name%%-supervise/
+debian/run-authbind /var/lib/%%name%%/%%name%%_authbind-supervise/
+helpers /var/lib/%%name%%/

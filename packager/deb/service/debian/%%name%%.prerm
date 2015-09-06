@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+
+if [ -e '/etc/service/%%name%%-supervise/' ]; then
+    service %%name%% stop
+    update-service --remove /var/lib/%%name%%/%%name%%-supervise/
+    update-service --remove /var/lib/%%name%%/%%name%%_authbind-supervise/
+    sleep 2
+fi
+
+
+#DEBHELPER#

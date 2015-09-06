@@ -1,0 +1,54 @@
+{
+  "name": "deployerjs",
+  "description": "Automatically build OS-specific packages for professional app-deployment.",
+  "version": "0.0.0",
+  "homepage": "https://github.com/manuelschneider/deployerjs",
+  "author": {
+    "name": "Manuel Schneider",
+    "email": "scriptlets@efreetsystems.de",
+    "url": "http://www.efreetsystems.de"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/manuelschneider/deployerjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/manuelschneider/deployerjs/issues"
+  },
+  "licenses": [
+    {
+      "type": "LGPL-3",
+      "url": "https://github.com/manuelschneider/deployerjs/blob/master/LICENSE-LGPL-3"
+    }
+  ],
+  "main": "Deployer.js",
+  "engines": {
+    "node": ">= 0.10.24"
+  },
+  "scripts": {},
+  "dependencies": {
+    "source-map-support": "~0.2.5",
+    "execSync": "~1.0.1-pre",
+    "cson": "~1.4.5",
+    "wrench": "~1.5.7",
+    "selfsigned": "~1.2.0",
+    "simplemigration": "0.0.3",
+    "shell-quote": "^1.4.2"
+  },
+  "devDependencies": {
+    "grunt-banner": "~0.2.0",
+    "grunt-contrib-watch": "~0.4.0",
+    "grunt-contrib-coffee": "~0.8.0",
+    "grunt-coffeelint": "0.0.8",
+    "grunt": "~0.4.2",
+    "grunt-contrib-copy": "~0.5.0"
+  },
+  "keywords": [],
+  "files": [
+    "LICENSE-LGPL-3",
+    "helpers",
+    "tasks",
+    "testdriver",
+    "Deployer.js*"
+  ]
+}

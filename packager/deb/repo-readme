@@ -1,0 +1,20 @@
+Deployerjs Debian-Repo
+=======================
+
+This is a fresh debian-repo, bootstrapped by deployerjs. You should edit this
+README to suit your needs.
+
+However, add it to your sources.list, there's always great stuff here!
+
+We've got two flavors:
+
+    deb file:%%repoPath%%/debian development main
+or
+    deb file:%%repoPath%%/debian production main
+
+development is the stuff that's ahead of the last tagged version.
+
+You need your gpg-key to make sure the packages are really created by you:
+    cat %%repoPath%%/debian/pubkey.asc | apt-key add -
+
+Packages are build for %%arch%%.

@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+if [ -z "$(cat /etc/passwd | grep %%name%%)" ]; then
+
+    adduser --no-create-home --disabled-password --disabled-login --gecos "" --ingroup nogroup %%name%%
+
+fi
+
+if [ ! -d "/var/log/%%name%%" ]; then
+    mkdir /var/log/%%name%%
+fi
+chown -R %%name%%:root /var/log/%%name%%
+chmod 2750 /var/log/%%name%%
+
+if [ ! -d "/var/lib/%%name%%/data" ]; then
+    mkdir /var/lib/%%name%%/data
+fi
+chown -R %%name%%:root /var/lib/%%name%%/data
+chmod 2755 /var/lib/%%name%%/data
+
+echo "configure net.conf and db.conf.."
+. /usr/share/debconf/confmodule || exit 0
+echo "configuration done."
+
+cd /etc/%%name%%/
+for file in *; do
+    if [ "$file" = "db.conf" -o "$file" = "net.conf" ]; then
+        continue
+    fi
+    if [ "${file#0:1}" = "_" ]; then
+        chown %%name%%:root "$file"
+        chmod 460 "$file"
+    else
+        chown root:root "$file"
+        chmod 755 "$file"
+    fi
+done
+
+
+mv /var/lib/%%name%%/%%name%%_authbind-supervise/run-authbind /var/lib/%%name%%/%%name%%_authbind-supervise/run
+
+sleep 3
+update-service --add /var/lib/%%name%%/%%name%%-supervise/
+update-service --add /var/lib/%%name%%/%%name%%_authbind-supervise/
+sleep 4
+
+#DEBHELPER#

@@ -1,0 +1,20 @@
+Origin: Deployerjs
+Label: deployerjs production
+Suite: production
+Codename: production
+Version: 3.2
+Architectures: %%arch%%
+Components: main
+Description: Stable deployerjs packages for debian stable
+SignWith: yes
+
+Origin: Deployerjs
+Label: deployerjs development
+Suite: development
+Codename: development
+Version: 3.2
+Architectures: %%arch%%
+Components: main 
+Description: Unstable deployerjs packages for debian stable
+SignWith: yes
+

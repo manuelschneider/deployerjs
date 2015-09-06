@@ -1,0 +1,4 @@
+etc/* /etc/%%name%%/
+examples /usr/share/doc/%%name%%/
+app/* /usr/lib/%%name%%/
+helpers /var/lib/%%name%%/
