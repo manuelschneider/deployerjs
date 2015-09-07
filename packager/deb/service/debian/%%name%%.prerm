@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+
+if [ -e '/etc/service/%%name%%-supervise/' ]; then
+    service %%name%% stop
+    sleep 2
+fi
+
+
+#DEBHELPER#

@@ -1,0 +1,71 @@
+#!/bin/bash
+set -e
+
+if [ "$1" = "remove" -o "$1" = "purge" ]; then
+    rm -rf /var/lib/%%name%%/*-supervise
+    rm -rf /var/lib/%%name%%/helpers
+    rm -rf /run/%%name%%
+fi
+
+if [ "$1" = "purge" ]; then
+    if [ -f "/etc/%%name%%/db.conf" ]; then
+        dbType="$(cat /etc/%%name%%/db.conf | grep "type: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        dbType="${dbType:1:-1}"
+        dbhost="$(cat /etc/%%name%%/db.conf | grep "host: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        dbhost="${dbhost:1:-1}"
+        dbport="$(cat /etc/%%name%%/db.conf | grep "port: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        dbschema="$(cat /etc/%%name%%/db.conf | grep "schema: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        dbschema="${dbschema:1:-1}"
+        dbuser="$(cat /etc/%%name%%/db.conf | grep "user: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        if [ "$dbuser" != "null" ]; then
+            dbuser="${dbuser:1:-1}"
+        fi
+        dbpw="$(cat /etc/%%name%%/db.conf | grep "pw: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        if [ "$dbpw" != "null" ]; then
+            dbpw="${dbpw:1:-1}"
+        fi
+        if [ "$dbType" = "mongodb" ]; then
+            if [ -f "/etc/%%name%%/db-admin.conf" ]; then
+                dbadmin="$(cat /etc/%%name%%/db-admin.conf | grep "user: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+                dbadmin="${dbadmin:1:-1}"
+                dbadminpw="$(cat /etc/%%name%%/db-admin.conf | grep "pw: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+                dbadminpw="${dbadminpw:1:-1}"
+            else
+                dbadmin=""
+                dbadminpw=""
+            fi
+
+            bakdir="/root/%%name%%.finalDump.$(date +%Y%m%d-%H%M)"
+            echo "doing a final dump to $bakdir"
+            if [ "$dbadmin" != "" ]; then
+                mongodump --host $dbhost --port $dbport --db $dbschema --username $dbadmin --password $dbadminpw --authenticationDatabase admin --out "$bakdir"
+            elif [ "$dbuser" != "null" ]; then
+                mongodump --host $dbhost --port $dbport --db $dbschema --username $dbuser --password $dbpw --out "$bakdir"
+            else
+                mongodump --host $dbhost --port $dbport --db $dbschema --out "$bakdir"
+            fi
+
+            echo "now purging the db"
+            if [ "$dbadmin" != "" ]; then
+                mongo --authenticationDatabase admin --username $dbadmin --password $dbadminpw --host $dbhost --port $dbport --eval 'db.dropDatabase();' $dbschema
+                mongo --username $dbadmin --password $dbadminpw --host $dbhost --port $dbport --eval "db.removeUser('$dbuser');" admin
+            elif [ "$dbuser" = "null" ]; then
+                mongo --host $dbhost --port $dbport --eval 'db.dropDatabase();' $dbschema                
+            else
+                echo "   ... could not purge your database: it seems you have auth enabled and given me no superadmin. plz do it yourself."
+            fi
+        fi
+    fi
+    echo purge | debconf-communicate %%name%%
+    rm -rf /var/lib/%%name%%
+    rm -rf /var/log/%%name%%
+    if [ -e "/usr/lib/%%name%%/" -a -n "$(ls -lisa /usr/lib/%%name%%/simpleMigration*)" ]; then
+        rm -rf /usr/lib/%%name%%/simpleMigration*
+    fi
+    rm -rf /etc/%%name%%
+    exec deluser %%name%% || exit 0
+fi
+
+sleep 3
+
+#DEBHELPER#

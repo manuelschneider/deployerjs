@@ -1,0 +1,86 @@
+#!/bin/bash
+
+if [ ! -d ".git" ]; then
+    echo "not a git repository!"
+    exit 1
+fi
+
+git log --no-merges --full-history --format="(%h)" > /dev/null 2>&1
+
+if [ $? -ne 0 ]; then
+    echo " there's something wrong with your git-repo..."
+    exit 1
+fi
+
+echo "["
+
+lastTag=""
+
+if [ -n "$(git tag)" ]; then  
+    commathingDone=0
+    for tag in $(git tag); do
+        if [ $commathingDone -eq 0 ]; then
+            commathingDone=1
+        else
+            echo ","
+        fi
+
+        echo "  {"
+        echo "    \"version\": \"${tag:1}\","
+        echo "    \"date\": $(git show -s --format="%ct" $tag)000,"
+        echo "    \"stable\": true,"
+        echo "    \"changes\": ["
+        
+        smallCommathingDone=0
+        git log --no-merges --full-history --format="%h %s" "${lastTag}${tag}" | while read line; do
+            if [ $smallCommathingDone -eq 0 ]; then
+                smallCommathingDone=1
+            else
+                echo ","
+            fi
+            echo -n "      { \"gitref\": \"$(echo $line | cut -d " " -f 1)\", "
+            echo -n "\"description\": \"$(echo $line | sed -r "s/^[0-9a-zA-Z]+ //" | sed -e 's/"/\\"/g')\" }"
+        done
+
+        echo ""        
+        echo "    ]"
+        echo -n "  }"
+
+        export lastTag="${tag}.."
+    done
+fi
+
+if [ $(git log --no-merges --full-history --format="(%h)" ${lastTag} | wc -l) -gt 0 ]; then
+
+    if [ -z "$tag" ]; then
+        tag="v0.0.0"
+    else
+        echo ","
+    fi
+
+    export version="${tag:1}-p$(git log --no-merges --full-history --format="(%h)" ${lastTag} | wc -l)"
+    echo "  {"
+    echo "    \"version\": \"$version\","
+    echo "    \"date\": $(git show -s --format="%ct")000,"
+    echo "    \"stable\": false,"
+    echo "    \"changes\": ["
+
+    smallCommathingDone=0
+    git log --no-merges --full-history --format="%h %s" ${lastTag} | while read line; do
+        if [ $smallCommathingDone -eq 0 ]; then
+            smallCommathingDone=1
+        else
+            echo ","
+        fi
+        echo -n "      { \"gitref\": \"$(echo $line | cut -d " " -f 1)\", "
+        echo -n "\"description\": \"$(echo $line | sed -r "s/^[0-9a-zA-Z]+ //" | sed -e 's/"/\\"/g')\" }"
+    done
+    echo ""
+
+    echo "    ]"
+    echo "  }"
+else
+    echo ""
+fi
+
+echo "]"

@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+echo "configure net.conf and db.conf.."
+. /usr/share/debconf/confmodule || exit 0
+echo "configuration done."
+
+cd /etc/%%name%%/
+for file in *; do
+    if [ "$file" = "db.conf" -o "$file" = "net.conf" ]; then
+        continue
+    fi
+    chown root:root "$file"
+    if [ "${file#0:1}" = "_" ]; then
+        chmod 460 "$file"
+    else
+        chmod 755 "$file"
+    fi
+done
+
+ln -s /usr/lib/%%name%%/index.js /usr/bin/%%name%%
+
+#DEBHELPER#

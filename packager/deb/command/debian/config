@@ -1,0 +1,267 @@
+#!/bin/bash
+
+set -e
+
+if [ ! -f /var/lib/%%name%%/helpers/netConf.js ]; then
+    exit 0
+fi
+
+. /usr/share/debconf/confmodule
+
+### net.conf (if required)
+if [ -f "/usr/share/doc/%%name%%/examples/net.conf" ]; then
+    echo "  configuring net.conf/hostname"
+    db_input medium %%name%%/hostname || true
+    if [ -f "/etc/%%name%%/net.conf" ]; then
+        db_set %%name%%/hostname "$(/var/lib/%%name%%/helpers/netConf.js "/etc/%%name%%/net.conf" --hostname)"
+    fi
+    db_go
+    db_get %%name%%/hostname
+    hostname="$RET"
+    echo "hostname: \"$hostname\"" > /etc/%%name%%/net.conf.new
+    chown root:root /etc/%%name%%/net.conf.new
+    chmod 600 /etc/%%name%%/net.conf.new
+
+    echo "  configuring net.conf/ports"
+    if [ -n "$(/var/lib/%%name%%/helpers/netConf.js "/usr/share/doc/%%name%%/examples/net.conf" --list-portnames)" ]; then
+        echo "ports:" >> /etc/%%name%%/net.conf.new
+    fi
+    tcpdone=0;udpdone=0
+    IFS=$'\n'
+    for port in $(/var/lib/%%name%%/helpers/netConf.js "/usr/share/doc/%%name%%/examples/net.conf" --list-portnames); do
+        portInfo="$(echo "$port" | cut -d " " -f 1)"
+        proto="$(echo "$portInfo" | cut -d "/" -f 2)"
+        portNumber="$(echo "$portInfo" | cut -d "/" -f 1)"
+        portName="$(echo "$port" | sed -r "s/^.+? //")"
+
+        if [ $proto = "tcp" -a $tcpdone -eq 0 ]; then
+            echo "    tcp:" >> /etc/%%name%%/net.conf.new
+            tcpdone=1
+        fi
+        if [ $proto = "udp" -a $udpdone -eq 0 ]; then
+            echo "    udp:" >> /etc/%%name%%/net.conf.new
+            udpdone=1
+        fi
+
+        db_input medium %%name%%/port || true
+        db_subst %%name%%/port name "$portName"
+        db_subst %%name%%/port proto "$proto"
+        if [ -f "/etc/%%name%%/net.conf" ]; then
+            if [ -n "$(/var/lib/%%name%%/helpers/netConf.js "/etc/%%name%%/net.conf" --list-portnames | grep " $portName$" | grep "$proto ")" ]; then
+                db_set %%name%%/port "$(/var/lib/%%name%%/helpers/netConf.js "/etc/%%name%%/net.conf" --list-portnames | grep " $portName$" | grep "$proto " | cut -d "/" -f 1)"
+            else
+                db_set %%name%%/port "$portNumber"
+            fi
+        else
+            db_set %%name%%/port "$portNumber"
+        fi
+        db_go
+        db_get %%name%%/port
+        echo "        $portName: $RET" >> /etc/%%name%%/net.conf.new
+    done
+
+    echo "  configuring net.conf/ssl"
+    if [ -n "$(/var/lib/%%name%%/helpers/netConf.js "/usr/share/doc/%%name%%/examples/net.conf" --list-ssl)" ]; then
+        echo "ssl:" >> /etc/%%name%%/net.conf.new
+    fi
+    IFS=$'\n'
+    for cert in $(/var/lib/%%name%%/helpers/netConf.js "/usr/share/doc/%%name%%/examples/net.conf" --list-ssl); do
+        name="$(echo "$cert" | cut -d ":" -f 1)"
+        certFiles="$(echo "$cert" | cut -d ":" -f 2)"
+        ca="$(echo "$certFiles" | cut -d " " -f 2)"
+        key="$(echo "$certFiles" | cut -d " " -f 3)"
+        crt="$(echo "$certFiles" | cut -d " " -f 4)"
+        if [ -f "/etc/%%name%%/net.conf" ]; then
+            if [ -n "$(/var/lib/%%name%%/helpers/netConf.js "/etc/%%name%%/net.conf" --list-ssl | grep "$name")" ]; then
+                currentCert="$(/var/lib/%%name%%/helpers/netConf.js "/etc/%%name%%/net.conf" --list-ssl | grep "$name")"
+                certFiles="$(echo "$currentCert" | cut -d ":" -f 2)"
+                ca="$(echo "$certFiles" | cut -d " " -f 2)"
+                key="$(echo "$certFiles" | cut -d " " -f 3)"
+                crt="$(echo "$certFiles" | cut -d " " -f 4)"
+            fi
+        fi
+        if [ "$crt" = "null" -o "$key" = "null" ]; then
+            key="/etc/%%name%%/certs/$name.key"
+            crt="/etc/%%name%%/certs/$name.crt"
+        fi
+        key="\"$key\""
+        crt="\"$crt\""
+        if [ "$ca" != "null" ]; then
+            ca="\"$ca\""
+        fi
+        echo "    $name:" >> /etc/%%name%%/net.conf.new
+        echo "        crt: $crt" >> /etc/%%name%%/net.conf.new
+        echo "        key: $key" >> /etc/%%name%%/net.conf.new
+        echo "        ca: $ca" >> /etc/%%name%%/net.conf.new
+    done
+    if [ ! -d "/etc/%%name%%/certs" ]; then
+        mkdir "/etc/%%name%%/certs"
+    fi
+    /var/lib/%%name%%/helpers/generateCerts.js /etc/%%name%%/net.conf.new
+    for file in /etc/%%name%%/certs/*; do
+        chown root:root $file
+        chmod 460 $file
+    done
+
+    echo "  activate new net.conf"
+    mv /etc/%%name%%/net.conf.new /etc/%%name%%/net.conf
+    chown root:root /etc/%%name%%/net.conf
+    chmod 644 /etc/%%name%%/net.conf
+fi
+
+### db.conf (if required)
+if [ -f "/usr/share/doc/%%name%%/examples/db.conf" ]; then
+    dbType="$(cat /usr/share/doc/%%name%%/examples/db.conf | grep type | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+    dbType="${dbType:1:-1}"
+
+    echo "## the type of the db you'd like to use." > /etc/%%name%%/db.conf.new
+    echo "## do not change this, unless you know how to manually" >> /etc/%%name%%/db.conf.new
+    echo "## apply the db-migrations and that your app supports it!" >> /etc/%%name%%/db.conf.new
+    echo "type: '$dbType'" >> /etc/%%name%%/db.conf.new
+    chown root:root /etc/%%name%%/db.conf.new
+    chmod 600 /etc/%%name%%/db.conf.new
+
+    echo "" >> /etc/%%name%%/db.conf.new
+    echo "## the rest is pretty standard:" >> /etc/%%name%%/db.conf.new
+
+    echo "  configuring db.conf/host"
+    db_input medium %%name%%/dbhost || true
+    db_subst %%name%%/dbhost dbType "$dbType"
+    if [ -f "/etc/%%name%%/db.conf" ]; then
+        dbHost="$(cat /etc/%%name%%/db.conf | grep "host: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        dbHost="${dbHost:1:-1}"
+        db_set %%name%%/dbhost "$dbHost"
+    fi
+    db_go
+    db_get %%name%%/dbhost
+    dbhost="$RET"
+    echo "host: \"$dbhost\"" >> /etc/%%name%%/db.conf.new
+
+    echo "  configuring db.conf/port"
+    db_input medium %%name%%/dbport || true
+    db_subst %%name%%/dbport dbType "$dbType"
+    db_subst %%name%%/dbport dbhost "$dbhost"
+    if [ -f "/etc/%%name%%/db.conf" ]; then
+        dbport="$(cat /etc/%%name%%/db.conf | grep "port: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        db_set %%name%%/dbport "$dbport"
+    elif [ "$dbType" = "mongodb" ]; then
+        db_set %%name%%/dbport "27017"      
+    fi
+    db_go
+    db_get %%name%%/dbport
+    dbport="$RET"
+    echo "port: $dbport" >> /etc/%%name%%/db.conf.new
+
+    echo "  configuring db.conf/schema"
+    db_input medium %%name%%/dbschema || true
+    db_subst %%name%%/dbschema dbType "$dbType"
+    db_subst %%name%%/dbschema dbhost "$dbhost"
+    if [ -f "/etc/%%name%%/db.conf" ]; then
+        dbschema="$(cat /etc/%%name%%/db.conf | grep "schema: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        dbschema="${dbschema:1:-1}"
+        db_set %%name%%/dbschema "$dbschema"
+    else
+        db_set %%name%%/dbschema "%%name%%"        
+    fi
+    db_go
+    db_get %%name%%/dbschema
+    dbschema="$RET"
+    echo "schema: \"$dbschema\"" >> /etc/%%name%%/db.conf.new
+
+    if [ "$dbType" = "mongodb" ]; then
+        if [ -f "/etc/%%name%%/db.conf" ]; then
+            dbuser="$(cat /etc/%%name%%/db.conf | grep "user: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+            dbpw="$(cat /etc/%%name%%/db.conf | grep "pw: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+        else
+            dbuser="null"
+            dbpw="null"
+        fi
+
+        if [ -f "/etc/%%name%%/db-admin.conf" ]; then
+            dbadmin="$(cat /etc/%%name%%/db-admin.conf | grep "user: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+            dbadmin="${dbadmin:1:-1}"
+            dbadminpw="$(cat /etc/%%name%%/db-admin.conf | grep "pw: " | cut -d ":" -f 2 | sed -r "s/\s+//g")"
+            dbadminpw="${dbadminpw:1:-1}"
+        else
+            dbadmin=""
+            dbadminpw=""
+        fi
+
+        cd /usr/lib/%%name%%
+        ok=0
+        /var/lib/%%name%%/helpers/dbAccessable.js "{\"type\": \"mongodb\", \"host\": \"$dbhost\", \"port\": $dbport, \"schema\": \"$dbschema\", \"user\": $dbuser, \"pw\": $dbpw}" $dbadmin $dbadminpw || ok=1 && true
+        if [ $ok -ne 0 ]; then
+            echo "    could not access db, requiring admin-user to setup user etc.."
+            db_input medium %%name%%/dbadmin || true
+            db_subst %%name%%/dbadmin dbType "$dbType"
+            db_subst %%name%%/dbadmin dbhost "$dbhost"
+            db_set %%name%%/dbadmin "$dbadmin"
+            db_go
+            db_get %%name%%/dbadmin
+            dbadmin="$RET"
+
+            if [ "$dbadmin" = "" ]; then
+                dbadminpw=""
+            else
+                db_input medium %%name%%/dbadminpw || true
+                db_subst %%name%%/dbadminpw dbType "$dbType"
+                db_subst %%name%%/dbadminpw dbhost "$dbhost"
+                db_subst %%name%%/dbadminpw dbadmin "$dbadmin"
+                db_set %%name%%/dbadminpw "$dbadminpw"
+                db_go
+                db_get %%name%%/dbadminpw
+                dbadminpw="$RET"            
+
+                echo "user: \"$dbadmin\"" > /etc/%%name%%/db-admin.conf
+                echo "pw: \"$dbadminpw\"" >> /etc/%%name%%/db-admin.conf
+            fi
+
+            db_input medium %%name%%/dbuser || true
+            db_subst %%name%%/dbuser dbType "$dbType"
+            db_subst %%name%%/dbuser dbhost "$dbhost"
+            if [ "$dbuser" = "null" ]; then
+                db_set %%name%%/dbuser "%%name%%"
+            else
+                db_set %%name%%/dbuser "${dbuser:1:-1}"
+            fi
+            db_go
+            db_get %%name%%/dbuser
+            dbuser="\"$RET\""
+            echo "user: $dbuser" >> /etc/%%name%%/db.conf.new
+
+            db_input medium %%name%%/dbpw || true
+            db_subst %%name%%/dbpw dbType "$dbType"
+            db_subst %%name%%/dbpw dbhost "$dbhost"
+            db_subst %%name%%/dbpw dbuser "$dbuser"
+            if [ "$dbpw" = "null" ]; then
+                db_set %%name%%/dbpw "$(cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c32;echo;)"
+            else
+                db_set %%name%%/dbpw "${dbpw:1:-1}"
+            fi
+            db_go
+            db_get %%name%%/dbpw
+            dbpw="\"$RET\""
+            echo "pw: $dbpw" >> /etc/%%name%%/db.conf.new
+        else
+            echo "user: null" >> /etc/%%name%%/db.conf.new
+            echo "pw: null" >> /etc/%%name%%/db.conf.new
+        fi
+
+        ok=0
+        /var/lib/%%name%%/helpers/updateDb.js "{\"type\": \"mongodb\", \"host\": \"$dbhost\", \"port\": $dbport, \"schema\": \"$dbschema\", \"user\": $dbuser, \"pw\": $dbpw}" $dbadmin $dbadminpw || ok=1 && true
+        if [ $ok -ne 0 ]; then
+            exit 1
+        fi
+    else
+        echo "unsupported dbType '$dbType'"
+        exit 1
+    fi
+
+    echo "  activate new db.conf"
+    mv /etc/%%name%%/db.conf.new /etc/%%name%%/db.conf
+    chown root:root /etc/%%name%%/db.conf
+    chmod 460 /etc/%%name%%/db.conf
+fi
+
+
+exit 0

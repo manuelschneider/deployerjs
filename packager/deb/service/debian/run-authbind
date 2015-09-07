@@ -1,0 +1,2 @@
+#!/bin/sh
+exec setuidgid %%name%% authbind /usr/bin/nodejs /usr/lib/%%name%%/index.js 2>&1 >> /var/log/%%name%%/cli.log

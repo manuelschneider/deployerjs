@@ -1,0 +1,68 @@
+Template: %%name%%/hostname
+Type: string
+Default: localhost
+_Description: Hostname to bind:
+ %%name%% needs to know its hostname. Defaults to 'localhost' to
+ avoid exposing some network stuff externally.
+
+Template: %%name%%/port
+Type: string
+Default: none
+_Description: Port for ${name} (${proto}):
+ %%name%% will listen on this port, set it to something thats free
+ and appropriate.
+
+Template: %%name%%/dbhost
+Type: string
+Default: localhost
+_Description: Hostname of your database (${dbType}):
+ %%name%% requires a database of type ${dbType}. By default this is
+ the database that's installed automatically as dependency on
+ localhost.
+
+Template: %%name%%/dbport
+Type: string
+Default: none
+_Description: Port of your database (${dbType}):
+ %%name%% requires a database of type ${dbType}. Please enter the network
+ port by which the database on ${dbhost} can be reached.
+
+Template: %%name%%/dbschema
+Type: string
+Default: none
+_Description: Name of your database (schema) (${dbType}):
+ %%name%% requires a database of type ${dbType}. Please enter the name
+ for the database (schema) on ${dbhost} to be used.
+
+Template: %%name%%/dbadmin
+Type: string
+Default: admin
+_Description: Name of the superuser at your database at ${dbhost} (${dbType}):
+ %%name%% requires a database of type ${dbType}. It seems you have not
+ created a user-account yet, but the database is not accessable (any
+ longer) without one. You should provide this installer with admin-credentials,
+ so migrations can be applied properly.
+ See https://github.com/manuelschneider/simplemigration for details.
+ 
+ Leave it empty if you have already configured a user/pw combination for the
+ app manually.
+
+Template: %%name%%/dbadminpw
+Type: string
+Default: none
+_Description: Password of the superuser of your db:
+ The password for ${dbadmin} of your ${dbType} at ${dbhost}.
+
+Template: %%name%%/dbuser
+Type: string
+Default: %%name%%
+_Description: Name of the user for %%name%% at your database at ${dbhost} (${dbType}):
+ %%name%% requires a database of type ${dbType}. Please specify the name of the
+ db-user for it.
+
+Template: %%name%%/dbpw
+Type: string
+Default: none
+_Description: Password for ${dbuser} at ${dbhost} (${dbType}):
+ If there has been no saved password yet, the default is generated and should be
+ save to use.

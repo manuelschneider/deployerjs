@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# init.d script with LSB support.
+#
+### BEGIN INIT INFO
+# Provides:          %%name%%
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $network $local_fs $remote_fs
+# Should-Start:      $named
+# Should-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: %%description%%
+# Description:       Package built automatically with 'deployerjs'. See
+#                    %%homepage%%
+#                    or `man %%name%%` for details.
+### END INIT INFO
+
+. /lib/lsb/init-functions
+
+case "$1" in
+  start)
+      echo "starting service %%name%%"
+      if [ -d "/run/%%name%%/" ]; then
+          rm -fr "/run/%%name%%/"
+      fi
+      mkdir "/run/%%name%%/"
+      chown %%name%%:root "/run/%%name%%/"
+      chmod 2755 "/run/%%name%%"
+      for file in $(find /etc/authbind/byport/ -user %%name%%); do
+          rm $file
+      done
+      if [ -n "$(/var/lib/%%name%%/helpers/netConf.js /etc/%%name%%/net.conf --privileged-ports)" ]; then
+          for port in $(/var/lib/%%name%%/helpers/netConf.js /etc/%%name%%/net.conf --privileged-ports); do
+              touch /etc/authbind/byport/$port
+              chown %%name%%:root /etc/authbind/byport/$port
+              chmod 755 /etc/authbind/byport/$port
+          done
+          if [ -e /etc/service/%%name%%-supervise/ ]; then
+              update-service --remove /var/lib/%%name%%/%%name%%-supervise/
+          fi
+          update-service --add /var/lib/%%name%%/%%name%%_authbind-supervise/
+          sleep 1
+          /usr/bin/svc -u /var/lib/%%name%%/%%name%%_authbind-supervise/
+      else
+          if [ -e /etc/service/%%name%%_authbind-supervise/ ]; then
+              update-service --remove /var/lib/%%name%%/%%name%%_authbind-supervise/
+          fi
+          update-service --add /var/lib/%%name%%/%%name%%-supervise/
+          sleep 1
+          /usr/bin/svc -u /var/lib/%%name%%/%%name%%-supervise/
+      fi
+	;;
+  stop)
+      echo "stopping service %%name%%"
+      for file in $(find /etc/authbind/byport/ -user %%name%%); do
+          rm $file
+      done
+      if [ -e /etc/service/%%name%%-supervise/ ]; then
+        update-service --remove /var/lib/%%name%%/%%name%%-supervise/
+      elif [ -e /etc/service/%%name%%_authbind-supervise/ ]; then
+        update-service --remove /var/lib/%%name%%/%%name%%_authbind-supervise/
+      fi
+  ;;
+  restart)
+      $0 stop
+      $0 start
+	;;
+  force-stop)
+      echo "force stopping service %%name%%"
+      for file in $(find /etc/authbind/byport/ -user %%name%%); do
+          rm $file
+      done
+      if [ -e /etc/service/%%name%%-supervise/ ]; then
+        /usr/bin/svc -k /var/lib/%%name%%/%%name%%-supervise/
+        update-service --remove /var/lib/%%name%%/%%name%%-supervise/
+      elif [ -e /etc/service/%%name%%_authbind-supervise/ ]; then
+        /usr/bin/svc -k /var/lib/%%name%%/%%name%%_authbind-supervise/
+        update-service --remove /var/lib/%%name%%/%%name%%_authbind-supervise/
+      fi
+    ;;
+  force-reload)
+      $0 force-stop
+      $0 start
+  ;;
+  *)
+	N=/etc/init.d/%%name%%
+	echo "Usage: $N {start|stop|force-stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0
