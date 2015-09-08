@@ -132,6 +132,6 @@
 
 //# sourceMappingURL=../tasks/deploy.js.map
 
-/*! deployerjs - v0.0.0 - 2015-09-07
+/*! deployerjs - v0.0.0
 * https://github.com/manuelschneider/deployerjs
 * Copyright (c) 2015 Manuel Schneider; All rights reserved. */require('source-map-support').install();
