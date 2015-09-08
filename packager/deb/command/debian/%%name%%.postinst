@@ -11,7 +11,7 @@ for file in *; do
         continue
     fi
     chown root:root "$file"
-    if [ "${file#0:1}" = "_" ]; then
+    if [ "${file:0:1}" = "_" ]; then
         chmod 460 "$file"
     else
         chmod 755 "$file"

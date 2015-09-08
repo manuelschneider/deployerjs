@@ -28,7 +28,7 @@ for file in *; do
     if [ "$file" = "db.conf" -o "$file" = "net.conf" ]; then
         continue
     fi
-    if [ "${file#0:1}" = "_" ]; then
+    if [ "${file:0:1}" = "_" ]; then
         chown %%name%%:root "$file"
         chmod 460 "$file"
     else
