@@ -18,6 +18,8 @@ for file in *; do
     fi
 done
 
-ln -s /usr/lib/%%name%%/index.js /usr/bin/%%name%%
+if [ ! -e /usr/bin/%%name%% ]; then
+    ln -s /usr/lib/%%name%%/index.js /usr/bin/%%name%%
+fi
 
 #DEBHELPER#
