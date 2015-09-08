@@ -38,7 +38,7 @@ for file in *; do
 done
 
 
-if [ -e /var/lib/%%name%%/%%name%%_authbind-supervise/run-authbind ]; then
+if [ ! -e /var/lib/%%name%%/%%name%%_authbind-supervise/run ]; then
     ln -s /var/lib/%%name%%/%%name%%_authbind-supervise/run-authbind /var/lib/%%name%%/%%name%%_authbind-supervise/run
 fi
 
