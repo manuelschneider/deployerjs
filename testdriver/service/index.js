@@ -35,7 +35,7 @@
         ]
       };
       require("fs").writeFileSync(this._tmpdirs.app + "/runnerConf.json", JSON.stringify(runnerConf));
-      res = require("execSync").run("cd " + (require("shell-quote").quote([this._tmpdirs.app])) + "            && npm install 'git://github.com/manuelschneider/node-bunyan.git#master' --production");
+      res = require("execSync").run("cd " + (require("shell-quote").quote([this._tmpdirs.app])) + "            && npm install 'git+https://github.com/manuelschneider/node-bunyan.git#master' --production");
       if (res !== 0) {
         throw new Error("could not install bunyan via npm!");
       }
