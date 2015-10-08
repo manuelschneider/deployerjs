@@ -243,8 +243,8 @@ if [ -f "/usr/share/doc/%%name%%/examples/db.conf" ]; then
             dbpw="\"$RET\""
             echo "pw: $dbpw" >> /etc/%%name%%/db.conf.new
         else
-            echo "user: null" >> /etc/%%name%%/db.conf.new
-            echo "pw: null" >> /etc/%%name%%/db.conf.new
+            echo "user: $dbuser" >> /etc/%%name%%/db.conf.new
+            echo "pw: $dbpw" >> /etc/%%name%%/db.conf.new
         fi
 
         ok=0
