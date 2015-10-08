@@ -7,6 +7,11 @@ echo "configuration done."
 
 cd /etc/%%name%%/
 for file in *; do
+    if [ "$file" = "db-admin.conf" ]; then
+        chown root:root "$file"
+        chmod 600 "$file"
+        continue
+    fi
     if [ "$file" = "db.conf" -o "$file" = "net.conf" ]; then
         continue
     fi
